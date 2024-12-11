@@ -21,6 +21,7 @@ import {
     $isTextNode,
     $nodesOfType,
     COMMAND_PRIORITY_HIGH,
+    CONTROLLED_TEXT_INSERTION_COMMAND,
     DELETE_CHARACTER_COMMAND,
     FORMAT_ELEMENT_COMMAND,
     FORMAT_TEXT_COMMAND,
@@ -34,6 +35,7 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {useSearchLinks} from '../hooks/useSearchLinks';
 
 function $removeAtLink(node, {focus = false} = {}) {
+    console.log('$removeAtLink', node, {focus});
     if (!$isAtLinkNode(node)) {
         // eslint-disable-next-line no-console
         console.warn('$removeAtLink called on a non-at-link node', node);
@@ -80,9 +82,7 @@ export const KoenigAtLinkPlugin = ({searchLinks, siteUrl}) => {
             }
 
             if (event.inputType === 'insertText' && event.data === '@') {
-                let replaceAt = false;
-
-                editor.getEditorState().read(() => {
+                editor.update(() => {
                     // get the current selection
                     const selection = $getSelection();
                     if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -116,6 +116,8 @@ export const KoenigAtLinkPlugin = ({searchLinks, siteUrl}) => {
                         textAfterAnchor = nextSibling.getTextContent();
                     }
 
+                    console.log(textBeforeAnchor, textAfterAnchor);
+
                     const textBeforeRegExp = /(^|\s)@$/;
                     const textAfterRegExp = /^($|\s|\.)/;
 
@@ -123,15 +125,6 @@ export const KoenigAtLinkPlugin = ({searchLinks, siteUrl}) => {
                         textBeforeRegExp.test(textBeforeAnchor)
                         && textAfterRegExp.test(textAfterAnchor)
                     ) {
-                        replaceAt = true;
-                    }
-                });
-
-                if (replaceAt) {
-                    editor.update(() => {
-                        // selection should now be where the '@' character was
-                        const selection = $getSelection();
-
                         // store current node's format so it can be re-applied to the eventual link node
                         const linkFormat = selection.anchor.getNode().getFormat();
 
@@ -158,17 +151,20 @@ export const KoenigAtLinkPlugin = ({searchLinks, siteUrl}) => {
                             rangeSelection.anchor.set(searchNode.getKey(), 0, 'element');
                             rangeSelection.focus.set(searchNode.getKey(), 0, 'element');
                         }
-                    });
-                }
+                    }
+                }, {discrete: true});
             }
         };
 
         // weirdly the 'input' event doesn't fire for the first character typed in a paragraph
         const handleAtBeforeInput = (event) => {
             if (event.inputType === 'insertText' && event.data === '@') {
+                console.log(event);
+                // event.preventDefault();
                 editor.update(() => {
                     const selection = $getSelection();
                     if ($isRangeSelection(selection) && selection.isCollapsed() && !selection.anchor.getNode().getPreviousSibling()) {
+                        console.log(event);
                         handleAtInsert(event);
                     }
                 });
@@ -202,6 +198,7 @@ export const KoenigAtLinkPlugin = ({searchLinks, siteUrl}) => {
                 // we don't have a normal selection so we don't have a cursor inside
                 // an at-link node, remove all of them
                 if (!$isRangeSelection(selection)) {
+                    console.log('!isRangeSelection removing at-link nodes');
                     atLinkNodes.forEach($removeAtLink);
                     setFocusedAtLinkNode(null);
                     setQuery('');
@@ -357,6 +354,19 @@ export const KoenigAtLinkPlugin = ({searchLinks, siteUrl}) => {
                         return true;
                     }
                     return false;
+                },
+                COMMAND_PRIORITY_HIGH
+            ),
+            editor.registerCommand(
+                CONTROLLED_TEXT_INSERTION_COMMAND,
+                (data) => {
+                    // we handle beforeinput event for '@' character natively,
+                    // avoid lexical also inserting the @ char at unexpected times
+                    if (data === '@') {
+                        return true;
+                    } else {
+                        return false;
+                    }
                 },
                 COMMAND_PRIORITY_HIGH
             )
