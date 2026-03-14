@@ -1042,11 +1042,14 @@ test.describe('Card behaviour', async () => {
             await page.keyboard.type('First paragraph');
             await page.keyboard.press('Enter');
             await page.keyboard.type('---');
+            // Wait for HR card to be created before typing
+            await expect(page.locator('[data-kg-card="horizontalrule"]')).toBeVisible();
             await page.keyboard.type('Second paragraph');
             for (let i = 0; i < 'Second paragraph'.length; i++) {
                 await page.keyboard.press('ArrowLeft');
             }
-            // await page.keyboard.press('Control+KeyA');
+            // Wait for selection to settle after arrow key navigation
+            await page.waitForTimeout(50);
 
             await assertHTML(page, html`
                 <p dir="ltr"><span data-lexical-text="true">First paragraph</span></p>

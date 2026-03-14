@@ -282,16 +282,31 @@ test.describe('Call To Action Card', async () => {
         const fileChooserPromise = page.waitForEvent('filechooser');
         await page.click('[data-testid="media-upload-placeholder"]');
         const fileChooser = await fileChooserPromise;
+        // Set up a MutationObserver before triggering upload to detect progress bar
+        // even if it appears and disappears within a single event loop tick
+        const progressBarSeen = page.evaluate(() => {
+            return new Promise((resolve) => {
+                const observer = new MutationObserver(() => {
+                    if (document.querySelector('[data-testid="progress-bar"]')) {
+                        observer.disconnect();
+                        resolve(true);
+                    }
+                });
+                observer.observe(document.body, {childList: true, subtree: true});
+                // Timeout after 5s
+                setTimeout(() => { observer.disconnect(); resolve(false); }, 5000);
+            });
+        });
         await fileChooser.setFiles([filePath]);
-        const progressBar = page.locator('[data-testid="progress-bar"]');
-        await expect(progressBar).toBeVisible();
+        const wasSeen = await progressBarSeen;
+        expect(wasSeen).toBe(true);
 
         const imgLocator = page.locator('[data-kg-card="call-to-action"] img[src^="blob:"]');
         const imgElement = await imgLocator.first();
         await expect(imgElement).toHaveAttribute('src', /blob:/);
 
         // check for progress bar to disappear
-
+        const progressBar = page.locator('[data-testid="progress-bar"]');
         await expect(progressBar).not.toBeVisible();
     });
 

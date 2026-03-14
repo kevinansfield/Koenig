@@ -346,12 +346,10 @@ test.describe('Gallery card', async () => {
         // (Chrome for Testing may lose card selection after file upload)
         await page.locator('[data-kg-card="gallery"]').click();
         await expect(page.locator('[data-kg-card="gallery"][data-kg-card-selected="true"]')).toBeVisible();
-        // Wait for card re-render to settle after selection state change
-        await page.waitForTimeout(200);
 
-        // Click caption - use force because the caption element may be briefly
-        // re-rendered as the card's decorator reconciliation settles
-        await page.locator('[data-testid="gallery-card-caption"]').click({force: true});
+        // Wait for caption to be ready and click it
+        await expect(page.locator('[data-testid="gallery-card-caption"]')).toBeVisible();
+        await page.locator('[data-testid="gallery-card-caption"]').click();
         await page.keyboard.type('Caption');
         await page.keyboard.press('Enter');
 
@@ -414,6 +412,13 @@ test.describe('Gallery card', async () => {
             await page.click('[data-kg-card="image"] button[name="placeholder-button"]')
         ]);
         await fileChooser.setFiles([filePath]);
+
+        // Wait for image to fully load
+        await expect(page.locator('[data-kg-card="image"] img[src^="blob:"]')).toBeVisible();
+
+        // Click outside to deselect the image card before dragging
+        // (Chrome for Testing keeps the card selected after upload)
+        await page.click('p:not(figure p)');
 
         const imageBBox = await page.locator('[data-kg-card="image"]').nth(0).boundingBox();
         const galleryBBox = await page.locator('[data-kg-card="gallery"]').nth(0).boundingBox();

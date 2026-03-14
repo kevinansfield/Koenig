@@ -304,6 +304,8 @@ test.describe('Plus button', async () => {
             });
 
             await page.keyboard.press('ArrowUp');
+            // Wait for plus button to reposition after cursor move
+            await page.waitForTimeout(50);
 
             await expect(await page.locator('[data-kg-plus-menu]')).toHaveCount(0);
             expect(await page.locator('[data-kg-plus-button]')).not.toBeNull();
