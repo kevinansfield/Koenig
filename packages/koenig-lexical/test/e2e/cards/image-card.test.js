@@ -1054,10 +1054,8 @@ test.describe('Image card', async () => {
             // Caption still ok?
             await expect(captionEditor).toHaveText('Captiontest-**-Captiontest');
 
-            // Select the caption again - recalculate bounding box since text changed
-            // (original coordinates no longer map to the correct position)
-            const updatedBox = await captionEditor.boundingBox();
-            await page.mouse.click(updatedBox.x + updatedBox.width / 2, updatedBox.y + updatedBox.height / 2);
+            // Select the caption again (click centers on the element by default)
+            await captionEditor.click();
             await page.keyboard.type('_'); // To test the cursor is at the middle, otherwise were not testing anything
 
             // Press the enter key

@@ -262,6 +262,9 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                                 const selection = $createNodeSelection();
                                 selection.add(selectedCardKey);
                                 $setSelection(selection);
+                            } else {
+                                setSelectedCardKey(null);
+                                setIsEditingCard(false);
                             }
                         }, {tag: 'history-merge'});
                         return;
